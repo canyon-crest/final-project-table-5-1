@@ -1,3 +1,3 @@
-public class DrinkRecipie {
+public class DrinkRecipe {
     
 }

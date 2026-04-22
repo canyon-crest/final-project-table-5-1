@@ -10,6 +10,7 @@ import java.awt.Rectangle;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
+import javax.swing.Timer;
 
 import java.util.ArrayList;
 
@@ -56,6 +57,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private final RoundedBlock menuListBlock;
     private final JLabel menuListLabel;
     private final ArrayList<String> drinkMenuItems = new ArrayList<>();
+    private final Timer gameTimer;
 
     private int currentDay = 1;
     private int totalDays = 14;
@@ -121,6 +123,9 @@ public class GameMenuPanel extends javax.swing.JPanel {
         menuListLabel = createLabel("", Color.BLACK, 20, true, SwingConstants.CENTER);
         menuListBlock.add(menuListLabel, BorderLayout.CENTER);
 
+        gameTimer = new Timer(1000, e -> incrementElapsedTime());
+        gameTimer.setInitialDelay(1000);
+
         add(openBlock);
         add(dayBlock);
         add(moneyBlock);
@@ -146,6 +151,34 @@ public class GameMenuPanel extends javax.swing.JPanel {
 
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
+        refreshStatLabels();
+    }
+
+    public void startGameTimer() {
+        if (!gameTimer.isRunning()) {
+            gameTimer.start();
+        }
+    }
+
+    public void stopGameTimer() {
+        if (gameTimer.isRunning()) {
+            gameTimer.stop();
+        }
+    }
+
+    public void resetGameTimer() {
+        stopGameTimer();
+        elapsedMinutes = 0;
+        elapsedSeconds = 0;
+        refreshStatLabels();
+    }
+
+    private void incrementElapsedTime() {
+        elapsedSeconds++;
+        if (elapsedSeconds >= 60) {
+            elapsedSeconds = 0;
+            elapsedMinutes++;
+        }
         refreshStatLabels();
     }
 

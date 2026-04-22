@@ -26,6 +26,8 @@ public class Game {
         GameMenuPanel gamePanel = new GameMenuPanel();
         StartMenuPanel startPanel = new StartMenuPanel(difficulty -> {
             gamePanel.setDifficulty(difficulty);
+            gamePanel.resetGameTimer();
+            gamePanel.startGameTimer();
             cardLayout.show(root, GAME_CARD);
         });
 

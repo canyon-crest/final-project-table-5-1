@@ -54,6 +54,8 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private final CustomerCard customerTwo;
     private final CustomerCard customerThree;
 
+    private final CoffeeMakerPanel coffeeMaker;
+
     private final RoundedBlock menuListBlock;
     private final JLabel menuListLabel;
     private final ArrayList<String> drinkMenuItems = new ArrayList<>();
@@ -112,9 +114,16 @@ public class GameMenuPanel extends javax.swing.JPanel {
         pauseGameButton = createActionButton("PAUSE GAME");
         helpButton = createActionButton("HELP");
 
-        customerOne = new CustomerCard();
-        customerTwo = new CustomerCard();
+        coffeeMaker = new CoffeeMakerPanel(this::hideCoffeeMaker);
+        coffeeMaker.setVisible(false);
+
+        customerOne   = new CustomerCard();
+        customerTwo   = new CustomerCard();
         customerThree = new CustomerCard();
+
+        customerOne  .setMakeAction(() -> showCoffeeMaker());
+        customerTwo  .setMakeAction(() -> showCoffeeMaker());
+        customerThree.setMakeAction(() -> showCoffeeMaker());
 
         menuListBlock = new RoundedBlock(Color.WHITE, BORDER_TAN, 6, 28);
         menuListBlock.setLayout(new BorderLayout());
@@ -144,9 +153,22 @@ public class GameMenuPanel extends javax.swing.JPanel {
         add(customerTwo);
         add(customerThree);
         add(menuListBlock);
+        add(coffeeMaker);
 
         refreshStatLabels();
         refreshMenuListLabel();
+    }
+
+    private void showCoffeeMaker() {
+        coffeeMaker.reset();
+        coffeeMaker.setVisible(true);
+        coffeeMaker.revalidate();
+        coffeeMaker.repaint();
+        setComponentZOrder(coffeeMaker, 0);
+    }
+
+    private void hideCoffeeMaker() {
+        coffeeMaker.setVisible(false);
     }
 
     public void setDifficulty(String difficulty) {
@@ -289,6 +311,8 @@ public class GameMenuPanel extends javax.swing.JPanel {
         helpButton.setFont(actionFont);
 
         menuListLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(20 * fontScale))));
+
+        coffeeMaker.setBounds(0, 0, width, height);
     }
 
     private Rectangle scaleRect(int x, int y, int w, int h, float sx, float sy) {
@@ -322,6 +346,12 @@ class CustomerCard extends RoundedBlock {
 
         add(infoLabel);
         add(makeButton);
+    }
+
+    void setMakeAction(Runnable action) {
+        for (java.awt.event.ActionListener l : makeButton.getActionListeners())
+            makeButton.removeActionListener(l);
+        makeButton.addActionListener(e -> action.run());
     }
 
     @Override

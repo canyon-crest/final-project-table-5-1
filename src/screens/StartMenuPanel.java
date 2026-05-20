@@ -9,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.BasicStroke;
 import java.util.function.Consumer;
 
 import javax.swing.JButton;
@@ -99,6 +100,11 @@ public class StartMenuPanel extends JPanel {
         float scaleY = height / (float) BASE_HEIGHT;
         float fontScale = Math.min(scaleX, scaleY);
 
+        g2.setColor(new Color(247, 242, 232));
+        g2.fillRect(0, 0, width, height);
+        g2.setColor(new Color(214, 228, 213));
+        g2.fillRect(0, 0, width, Math.round(150 * scaleY));
+
         int bannerX = Math.round(80 * scaleX);
         int bannerY = Math.round(26 * scaleY);
         int bannerW = Math.round(540 * scaleX);
@@ -116,6 +122,25 @@ public class StartMenuPanel extends JPanel {
         int textX = (width - metrics.stringWidth(title)) / 2;
         int textY = bannerY + ((bannerH - metrics.getHeight()) / 2) + metrics.getAscent();
         g2.drawString(title, textX, textY);
+
+        g2.setColor(new Color(92, 66, 45));
+        int subtitleFontSize = Math.max(10, Math.round(17 * fontScale));
+        g2.setFont(new Font("SansSerif", Font.BOLD, subtitleFontSize));
+        String subtitle = "choose a profit goal, open the doors, keep the line moving";
+        metrics = g2.getFontMetrics();
+        g2.drawString(subtitle, (width - metrics.stringWidth(subtitle)) / 2, Math.round(154 * scaleY));
+
+        int cupX = Math.round(540 * scaleX);
+        int cupY = Math.round(336 * scaleY);
+        int cupW = Math.round(72 * scaleX);
+        int cupH = Math.round(54 * scaleY);
+        g2.setColor(new Color(151, 115, 89));
+        g2.fillRoundRect(cupX, cupY, cupW, cupH, Math.round(18 * fontScale), Math.round(18 * fontScale));
+        g2.setStroke(new BasicStroke(Math.max(2f, 4f * fontScale)));
+        g2.drawArc(cupX + cupW - Math.round(10 * scaleX), cupY + Math.round(12 * scaleY),
+                Math.round(34 * scaleX), Math.round(28 * scaleY), 270, 180);
+        g2.setColor(new Color(99, 72, 50));
+        g2.fillRect(cupX - Math.round(12 * scaleX), cupY + cupH, cupW + Math.round(36 * scaleX), Math.round(8 * scaleY));
 
         g2.dispose();
     }

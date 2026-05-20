@@ -1,18 +1,28 @@
 package screens;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 
 import javax.swing.JButton;
+import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JProgressBar;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
+import javax.swing.event.ChangeListener;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,8 +35,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private static final int OPEN_DURATION_SECONDS = 6 * 60;
     private static final int CLOSED_DURATION_SECONDS = 4 * 60;
     private static final long STARTING_MONEY_CENTS = 5000;
-    private static final long RESTOCK_COST_CENTS = 2000;
-    private static final int RESTOCK_TIME_SECONDS = 45;
+    private static final int RESTOCK_SECONDS_PER_ITEM = 5;
     private static final int CLEAN_TIME_SECONDS = 30;
 
     private static final Color BACKGROUND = new Color(236, 236, 236);
@@ -35,6 +44,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private static final Color MID_BROWN = new Color(151, 120, 92);
     private static final Color DARK_BROWN = new Color(118, 89, 63);
     private static final Color BORDER_TAN = new Color(223, 193, 140);
+    private static final Color MINT = new Color(159, 194, 168);
 
     private final RoundedBlock openBlock;
     private final JLabel openLabel;
@@ -73,6 +83,13 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private final Timer gameTimer;
     private final LinkedHashMap<String, DrinkRule> drinkRules = new LinkedHashMap<>();
     private final LinkedHashMap<String, Integer> inventory = new LinkedHashMap<>();
+    private final RestockOption[] restockOptions = {
+            new RestockOption("beans", "Coffee beans", 175, "scoops"),
+            new RestockOption("milk", "Milk", 125, "cartons"),
+            new RestockOption("vanilla syrup", "Vanilla syrup", 95, "bottles"),
+            new RestockOption("caramel syrup", "Caramel syrup", 95, "bottles"),
+            new RestockOption("cups", "Cups", 25, "cups")
+    };
 
     private int currentDay = 1;
     private int totalDays = 14;
@@ -96,7 +113,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
         setBackground(BACKGROUND);
         setupDrinkRules();
 
-        openBlock = new RoundedBlock(SOFT_BEIGE, null, 0, 42);
+        openBlock = new RoundedBlock(MINT, null, 0, 42);
         openBlock.setLayout(new GridBagLayout());
         openLabel = createLabel("OPEN", Color.BLACK, 64, true, SwingConstants.CENTER);
         openBlock.add(openLabel);
@@ -126,8 +143,8 @@ public class GameMenuPanel extends javax.swing.JPanel {
         cleanlinessBlock.add(cleanlinessLabel, BorderLayout.CENTER);
 
         actionsHeader = createHeaderBlock("ACTIONS");
-        customersHeader = createHeaderBlock("CUSTOMERS");
-        menuHeader = createHeaderBlock("MENU");
+        customersHeader = createHeaderBlock("ORDER QUEUE");
+        menuHeader = createHeaderBlock("RECIPES");
 
         checkInventoryButton = createActionButton("CHECK\nINVENTORY");
         cleanShopButton = createActionButton("CLEAN SHOP");
@@ -197,6 +214,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
         if(rule != null) {
             coffeeMaker.setOrderGuide(rule.name, rule.getGuideText());
         }
+        setMainGameVisible(false);
         coffeeMaker.setVisible(true);
         coffeeMaker.revalidate();
         coffeeMaker.repaint();
@@ -205,6 +223,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
 
     private void cancelCoffeeMaker() {
         coffeeMaker.setVisible(false);
+        setMainGameVisible(true);
         pendingCard = null;
     }
 
@@ -345,6 +364,27 @@ public class GameMenuPanel extends javax.swing.JPanel {
         setLabelText(menuListLabel, menuText.toString());
     }
 
+    private void setMainGameVisible(boolean visible) {
+        openBlock.setVisible(visible);
+        dayBlock.setVisible(visible);
+        moneyBlock.setVisible(visible);
+        timeBlock.setVisible(visible);
+        ratingBlock.setVisible(visible);
+        cleanlinessBlock.setVisible(visible);
+        actionsHeader.setVisible(visible);
+        customersHeader.setVisible(visible);
+        menuHeader.setVisible(visible);
+        checkInventoryButton.setVisible(visible);
+        cleanShopButton.setVisible(visible);
+        closeEarlyButton.setVisible(visible);
+        pauseGameButton.setVisible(visible);
+        helpButton.setVisible(visible);
+        customerOne.setVisible(visible);
+        customerTwo.setVisible(visible);
+        customerThree.setVisible(visible);
+        menuListBlock.setVisible(visible);
+    }
+
     private void setupDrinkRules() {
         drinkRules.clear();
         addDrinkRule(new DrinkRule("Espresso", 300, "Espresso", false, null));
@@ -412,17 +452,32 @@ public class GameMenuPanel extends javax.swing.JPanel {
             return;
         }
 
+        RestockPanel restockPanel = new RestockPanel(restockOptions);
         int choice = JOptionPane.showConfirmDialog(this,
-                buildInventoryMessage() + "\nRestock bundle costs " + formatMoney(RESTOCK_COST_CENTS)
-                        + " and 45 seconds.\nBuy it for tomorrow?",
+                restockPanel,
                 "Restock Inventory",
-                JOptionPane.YES_NO_OPTION);
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
 
-        if(choice == JOptionPane.YES_OPTION) {
-            currentMoneyCents -= RESTOCK_COST_CENTS;
-            totalProfitCents -= RESTOCK_COST_CENTS;
-            restockInventoryBundle();
-            advanceTime(RESTOCK_TIME_SECONDS);
+        if(choice == JOptionPane.OK_OPTION) {
+            long totalCost = restockPanel.getTotalCostCents();
+            int totalItems = restockPanel.getTotalItems();
+            if(totalItems == 0) {
+                JOptionPane.showMessageDialog(this, "Choose at least one item to buy.");
+                return;
+            }
+
+            currentMoneyCents -= totalCost;
+            totalProfitCents -= totalCost;
+            for (int i = 0; i < restockOptions.length; i++) {
+                int amount = restockPanel.getAmount(i);
+                if(amount > 0) {
+                    addInventory(restockOptions[i].key, amount);
+                }
+            }
+
+            int restockTime = Math.max(15, totalItems * RESTOCK_SECONDS_PER_ITEM);
+            advanceTime(restockTime);
             checkGameEnd();
         }
     }
@@ -709,6 +764,38 @@ public class GameMenuPanel extends javax.swing.JPanel {
     }
 
     @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        int width = getWidth();
+        int height = getHeight();
+        float sx = width / (float) BASE_WIDTH;
+        float sy = height / (float) BASE_HEIGHT;
+
+        g2.setColor(new Color(247, 243, 235));
+        g2.fillRect(0, 0, width, height);
+
+        g2.setColor(new Color(210, 224, 210));
+        g2.fillRect(0, 0, width, Math.round(170 * sy));
+
+        g2.setColor(new Color(128, 91, 59));
+        g2.fillRect(0, Math.round(164 * sy), width, Math.round(12 * sy));
+
+        g2.setColor(new Color(229, 213, 190));
+        g2.fillRect(0, Math.round(600 * sy), width, height - Math.round(600 * sy));
+
+        g2.setColor(new Color(198, 171, 138));
+        g2.setStroke(new BasicStroke(Math.max(1f, 2f * Math.min(sx, sy))));
+        for(int x = -120; x < width + 160; x += Math.max(40, Math.round(90 * sx))) {
+            g2.drawLine(x, Math.round(600 * sy), x + Math.round(180 * sx), height);
+        }
+
+        g2.dispose();
+    }
+
+    @Override
     public void doLayout() {
         super.doLayout();
         layoutScaled();
@@ -738,9 +825,9 @@ public class GameMenuPanel extends javax.swing.JPanel {
         pauseGameButton.setBounds(scaleRect(15, 612, 300, 86, sx, sy));
         helpButton.setBounds(scaleRect(15, 714, 300, 72, sx, sy));
 
-        customerOne.setBounds(scaleRect(350, 294, 505, 148, sx, sy));
-        customerTwo.setBounds(scaleRect(350, 472, 505, 148, sx, sy));
-        customerThree.setBounds(scaleRect(350, 650, 505, 148, sx, sy));
+        customerOne.setBounds(scaleRect(350, 286, 505, 154, sx, sy));
+        customerTwo.setBounds(scaleRect(350, 456, 505, 154, sx, sy));
+        customerThree.setBounds(scaleRect(350, 626, 505, 154, sx, sy));
 
         menuListBlock.setBounds(scaleRect(885, 286, 300, 512, sx, sy));
 
@@ -765,6 +852,100 @@ public class GameMenuPanel extends javax.swing.JPanel {
 
     private Rectangle scaleRect(int x, int y, int w, int h, float sx, float sy) {
         return new Rectangle(Math.round(x * sx), Math.round(y * sy), Math.round(w * sx), Math.round(h * sy));
+    }
+
+    private static class RestockOption {
+        private final String key;
+        private final String label;
+        private final long unitCostCents;
+        private final String unit;
+
+        RestockOption(String key, String label, long unitCostCents, String unit) {
+            this.key = key;
+            this.label = label;
+            this.unitCostCents = unitCostCents;
+            this.unit = unit;
+        }
+    }
+
+    private class RestockPanel extends JPanel {
+        private final JSpinner[] amountSpinners;
+        private final JLabel totalLabel;
+
+        RestockPanel(RestockOption[] options) {
+            amountSpinners = new JSpinner[options.length];
+            setLayout(new BorderLayout(0, 14));
+            setBackground(new Color(250, 246, 238));
+            setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+
+            JLabel title = new JLabel("Choose what to buy for tomorrow");
+            title.setFont(new Font("SansSerif", Font.BOLD, 22));
+            title.setForeground(DARK_BROWN);
+            add(title, BorderLayout.NORTH);
+
+            JPanel rows = new JPanel(new GridLayout(options.length, 1, 0, 8));
+            rows.setOpaque(false);
+
+            ChangeListener updateTotal = e -> updateTotalLabel();
+            for(int i = 0; i < options.length; i++) {
+                RestockOption option = options[i];
+                JPanel row = new JPanel(new BorderLayout(12, 0));
+                row.setOpaque(false);
+                row.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(223, 193, 140), 2),
+                        BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+
+                JLabel itemLabel = new JLabel(option.label + " (" + formatMoney(option.unitCostCents) + " / " + option.unit + ")");
+                itemLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
+                itemLabel.setForeground(new Color(64, 45, 32));
+
+                JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 30, 1));
+                spinner.setFont(new Font("SansSerif", Font.BOLD, 16));
+                spinner.addChangeListener(updateTotal);
+                amountSpinners[i] = spinner;
+
+                row.add(itemLabel, BorderLayout.CENTER);
+                row.add(spinner, BorderLayout.EAST);
+                rows.add(row);
+            }
+
+            totalLabel = new JLabel();
+            totalLabel.setFont(new Font("SansSerif", Font.BOLD, 17));
+            totalLabel.setForeground(DARK_BROWN);
+            totalLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+
+            add(rows, BorderLayout.CENTER);
+            add(totalLabel, BorderLayout.SOUTH);
+            updateTotalLabel();
+        }
+
+        int getAmount(int index) {
+            return ((Integer) amountSpinners[index].getValue()).intValue();
+        }
+
+        int getTotalItems() {
+            int total = 0;
+            for(int i = 0; i < amountSpinners.length; i++) {
+                total += getAmount(i);
+            }
+            return total;
+        }
+
+        long getTotalCostCents() {
+            long total = 0;
+            for(int i = 0; i < amountSpinners.length; i++) {
+                total += getAmount(i) * restockOptions[i].unitCostCents;
+            }
+            return total;
+        }
+
+        private void updateTotalLabel() {
+            int totalItems = getTotalItems();
+            int restockTime = totalItems == 0 ? 0 : Math.max(15, totalItems * RESTOCK_SECONDS_PER_ITEM);
+            totalLabel.setText("Total: " + formatMoney(getTotalCostCents())
+                    + "    Time: " + restockTime + " sec"
+                    + "    Cash after: " + formatMoney(currentMoneyCents - getTotalCostCents()));
+        }
     }
 
     private static class DrinkRule {
@@ -899,7 +1080,7 @@ class CustomerCard extends RoundedBlock {
         patienceSeconds = 60 + RNG.nextInt(61);
         active = true;
         infoLabel.setText(String.format(
-            "<html>%s<br>%d M %02d S<br>Order: %s</html>",
+            "<html>%s <span style='font-size:9px;'>arrived %d:%02d</span><br>Order: %s</html>",
             customerName, arrivalMin, arrivalSec, drinkOrder));
         recipeLabel.setText("<html>" + recipeHint + "</html>");
         recipeLabel.setVisible(true);
@@ -976,12 +1157,12 @@ class CustomerCard extends RoundedBlock {
 
     private String getRecipeHint(String drink) {
         if("Mocha".equals(drink)) {
-            return "Pick: Espresso + any milk + Caramel syrup";
+            return "Pick: Espresso + any milk<br>+ Caramel syrup";
         }
         if("Latte".equals(drink) || "Cappuccino".equals(drink) || "Flat White".equals(drink)) {
-            return "Pick: Espresso + any milk + no syrup";
+            return "Pick: Espresso + any milk<br>+ no syrup";
         }
-        return "Pick: Espresso + no milk + no syrup";
+        return "Pick: Espresso<br>+ no milk, no syrup";
     }
 
     void setMakeAction(Runnable action) {
@@ -997,18 +1178,18 @@ class CustomerCard extends RoundedBlock {
         int width = Math.max(1, getWidth());
         int height = Math.max(1, getHeight());
         float sx = width / 505f;
-        float sy = height / 148f;
+        float sy = height / 154f;
         float fontScale = Math.min(sx, sy);
 
-        infoLabel.setBounds(Math.round(24 * sx), Math.round(12 * sy), Math.round(278 * sx), Math.round(62 * sy));
-        recipeLabel.setBounds(Math.round(24 * sx), Math.round(74 * sy), Math.round(285 * sx), Math.round(36 * sy));
-        patienceLabel.setBounds(Math.round(24 * sx), Math.round(111 * sy), Math.round(170 * sx), Math.round(18 * sy));
-        patienceBar.setBounds(Math.round(24 * sx), Math.round(132 * sy), Math.round(278 * sx), Math.round(10 * sy));
-        makeButton.setBounds(Math.round(330 * sx), Math.round(24 * sy), Math.round(145 * sx), Math.round(98 * sy));
+        infoLabel.setBounds(Math.round(24 * sx), Math.round(10 * sy), Math.round(292 * sx), Math.round(48 * sy));
+        recipeLabel.setBounds(Math.round(24 * sx), Math.round(58 * sy), Math.round(292 * sx), Math.round(42 * sy));
+        patienceLabel.setBounds(Math.round(24 * sx), Math.round(105 * sy), Math.round(200 * sx), Math.round(18 * sy));
+        patienceBar.setBounds(Math.round(24 * sx), Math.round(128 * sy), Math.round(292 * sx), Math.round(12 * sy));
+        makeButton.setBounds(Math.round(336 * sx), Math.round(24 * sy), Math.round(142 * sx), Math.round(104 * sy));
 
-        infoLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(21 * fontScale))));
-        recipeLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(9, Math.round(13 * fontScale))));
+        infoLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(19 * fontScale))));
+        recipeLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(8, Math.round(12 * fontScale))));
         patienceLabel.setFont(new Font("SansSerif", Font.BOLD, Math.max(8, Math.round(12 * fontScale))));
-        makeButton.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(26 * fontScale))));
+        makeButton.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(25 * fontScale))));
     }
 }

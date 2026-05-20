@@ -68,7 +68,7 @@ public class CoffeeMakerPanel extends JPanel {
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public CoffeeMakerPanel(Runnable onFinish) {
+    public CoffeeMakerPanel(Runnable onSubmit, Runnable onCancel) {
         java.net.URL mugUrl      = getClass().getResource("/images/mug.png");
         java.net.URL espressoUrl = getClass().getResource("/images/espresso.png");
         java.net.URL milkUrl     = getClass().getResource("/images/milk.png");
@@ -133,9 +133,9 @@ public class CoffeeMakerPanel extends JPanel {
         nextBtn  = makeNavButton("Next >");
         backBtn  = makeNavButton("< Back");
         closeBtn = makeNavButton("✕");
-        nextBtn .addActionListener(e -> { if (currentStep < 2) showStep(currentStep + 1); else onFinish.run(); });
+        nextBtn .addActionListener(e -> { if (currentStep < 2) showStep(currentStep + 1); else onSubmit.run(); });
         backBtn .addActionListener(e -> { if (currentStep > 0) showStep(currentStep - 1); });
-        closeBtn.addActionListener(e -> onFinish.run());
+        closeBtn.addActionListener(e -> onCancel.run());
         add(nextBtn); add(backBtn); add(closeBtn);
 
         showStep(0);

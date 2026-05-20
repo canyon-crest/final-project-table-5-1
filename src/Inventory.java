@@ -3,6 +3,7 @@ import java.util.ArrayList;
 public class Inventory {
     
 	private Ingredient beans;
+	private Ingredient cups;
 	private ArrayList<Ingredient> syrups;
 	private ArrayList<Ingredient> milks;
 	//private ArrayList<Ingredient> toppings;
@@ -15,6 +16,7 @@ public class Inventory {
 	
 	public Inventory() {
 		this.beans = new Ingredient("beans", BEANS_PRICE, "lbs"); //priced by the pound, 20 shots per pound
+		this.cups = new Ingredient("cups", 0.20, "cups");
 		this.syrups = new ArrayList<Ingredient>();
 		this.milks = new ArrayList<Ingredient>();
 		//this.toppings = new ArrayList<Ingredient>();
@@ -22,6 +24,7 @@ public class Inventory {
 	
 	public String checkInventory() {
 		String message = this.beans.toString() + "\n";
+		message += this.cups.toString() + "\n";
 		if(syrups.size() > 0) {
 			for(int i = 0; i < syrups.size(); i ++) {
 				message += syrups.get(i).toString() + "\n";
@@ -29,7 +32,7 @@ public class Inventory {
 		}
 		if(milks.size() > 0) {
 			for(int i = 0; i < milks.size(); i ++) {
-				message += syrups.get(i).toString() + "\n";
+				message += milks.get(i).toString() + "\n";
 			}
 		}
 //		if(toppings.size() > 0) {
@@ -44,15 +47,20 @@ public class Inventory {
 		if(type.equals("beans")) {
 			beans.updateQuantity(amount);
 		}
+		else if(type.equals("cups")) {
+			cups.updateQuantity(amount);
+		}
 		else if(type.equals("milk")) {
+			boolean found = false;
 			if(milks.size() > 0) {
 				for(int i = 0; i < milks.size(); i ++) {
 					if((milks.get(i)).getName().equals(name)) {
 						(milks.get(i)).updateQuantity(amount);
+						found = true;
 					}
 				}
 			}
-			else {
+			if(!found) {
 				if(!name.equals("milk")) {
 					milks.add(new Ingredient(name, SPECIALMILK_PRICE, "cartons", amount));
 				}
@@ -62,14 +70,16 @@ public class Inventory {
 			}
 		}
 		else if(type.equals("syrup")) {
+			boolean found = false;
 			if(syrups.size() > 0) {
 				for(int i = 0; i < syrups.size(); i ++) {
 					if((syrups.get(i)).getName().equals(name)) {
 						(syrups.get(i)).updateQuantity(amount);
+						found = true;
 					}
 				}
 			}
-			else {
+			if(!found) {
 				if(!name.equals("vanilla syrup")) {
 					syrups.add(new Ingredient(name, SPECIALSYRUP_PRICE, "bottles", amount));
 				}
@@ -80,8 +90,57 @@ public class Inventory {
 		}
 		
 	}
+
+	public boolean hasIngredient(String name, int amount) {
+		return getQuantity(name) >= amount;
+	}
+
+	public boolean consumeIngredient(String name, int amount) {
+		if(!hasIngredient(name, amount)) {
+			return false;
+		}
+		updateIngredientQuantity(name, -amount);
+		return true;
+	}
+
+	public int getQuantity(String name) {
+		Ingredient ingredient = findIngredient(name);
+		if(ingredient == null) {
+			return 0;
+		}
+		return ingredient.getQuantity();
+	}
+
+	private void updateIngredientQuantity(String name, int amount) {
+		Ingredient ingredient = findIngredient(name);
+		if(ingredient != null) {
+			ingredient.updateQuantity(amount);
+		}
+	}
+
+	private Ingredient findIngredient(String name) {
+		if(beans.getName().equals(name)) {
+			return beans;
+		}
+		if(cups.getName().equals(name)) {
+			return cups;
+		}
+		for(int i = 0; i < milks.size(); i ++) {
+			if(milks.get(i).getName().equals(name)) {
+				return milks.get(i);
+			}
+		}
+		for(int i = 0; i < syrups.size(); i ++) {
+			if(syrups.get(i).getName().equals(name)) {
+				return syrups.get(i);
+			}
+		}
+		return null;
+	}
+
 	public void clearInventory() {
 		beans.clear();
+		cups.clear();
 		if(milks.size() > 0) {
 			for(int i = 0; i < milks.size(); i ++) {
 				(milks.get(i)).clear();

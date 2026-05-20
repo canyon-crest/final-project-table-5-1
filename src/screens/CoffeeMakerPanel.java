@@ -45,6 +45,8 @@ public class CoffeeMakerPanel extends JPanel {
 
     // ── Step 1 – Coffee type ─────────────────────────────────────────────────
     private final JLabel  coffeeTitleLbl;
+    private final JLabel orderTitleLbl;
+    private final JLabel orderGuideLbl;
     private final JButton coldBrewBtn, espressoBtn, dripBtn;
 
     // ── Step 2 – Syrups + Milk ───────────────────────────────────────────────
@@ -68,7 +70,11 @@ public class CoffeeMakerPanel extends JPanel {
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public CoffeeMakerPanel(Runnable onSubmit, Runnable onCancel) {
+    public CoffeeMakerPanel(Runnable onFinish) {
+        this(onFinish, onFinish);
+    }
+
+    public CoffeeMakerPanel(Runnable onFinish, Runnable onCancel) {
         java.net.URL mugUrl      = getClass().getResource("/images/mug.png");
         java.net.URL espressoUrl = getClass().getResource("/images/espresso.png");
         java.net.URL milkUrl     = getClass().getResource("/images/milk.png");
@@ -77,6 +83,13 @@ public class CoffeeMakerPanel extends JPanel {
         milkImage     = (milkUrl     != null) ? new javax.swing.ImageIcon(milkUrl).getImage()     : null;
         setLayout(null);
         setBackground(BACKGROUND);
+
+        orderTitleLbl = makeLabel("Order", DARK_BROWN, 30, true);
+        orderGuideLbl = makeLabel("Recipe will appear here", Color.BLACK, 18, true);
+        orderTitleLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        orderGuideLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        add(orderTitleLbl);
+        add(orderGuideLbl);
 
         // Order tabs (clickable labels painted over custom tab shapes)
         for (int i = 0; i < 4; i++) {
@@ -132,8 +145,8 @@ public class CoffeeMakerPanel extends JPanel {
         // Nav
         nextBtn  = makeNavButton("Next >");
         backBtn  = makeNavButton("< Back");
-        closeBtn = makeNavButton("✕");
-        nextBtn .addActionListener(e -> { if (currentStep < 2) showStep(currentStep + 1); else onSubmit.run(); });
+        closeBtn = makeNavButton("X");
+        nextBtn .addActionListener(e -> { if (currentStep < 2) showStep(currentStep + 1); else onFinish.run(); });
         backBtn .addActionListener(e -> { if (currentStep > 0) showStep(currentStep - 1); });
         closeBtn.addActionListener(e -> onCancel.run());
         add(nextBtn); add(backBtn); add(closeBtn);
@@ -371,6 +384,11 @@ public class CoffeeMakerPanel extends JPanel {
             tabLabels[i].setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(20 * fs))));
         }
 
+        orderTitleLbl.setBounds(sr(430, 106, 340, 40, sx, sy));
+        orderTitleLbl.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, Math.round(30 * fs))));
+        orderGuideLbl.setBounds(sr(365, 146, 470, 32, sx, sy));
+        orderGuideLbl.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(17 * fs))));
+
         // Step 1 – Coffee
         coffeeTitleLbl.setBounds(sr(55, 138, 260, 52, sx, sy));
         coffeeTitleLbl.setFont(new Font("SansSerif", Font.BOLD, Math.max(14, Math.round(42 * fs))));
@@ -432,6 +450,11 @@ public class CoffeeMakerPanel extends JPanel {
         for (JButton b : milkBtns)    b.putClientProperty("selected", false);
         for (JButton b : toppingBtns) b.putClientProperty("selected", false);
         showStep(0);
+    }
+
+    public void setOrderGuide(String orderName, String guideText) {
+        orderTitleLbl.setText("Order: " + orderName);
+        orderGuideLbl.setText(guideText);
     }
 
     public String getSelectedCoffee()          { return selectedCoffee; }

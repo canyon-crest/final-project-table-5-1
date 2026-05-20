@@ -69,6 +69,7 @@ public class GameMenuPanel extends javax.swing.JPanel {
     private double currentRating = 0.0;
     private double shopCleanlinessRating = 10.0;
     private String difficulty = "Easy";
+    private CustomerCard pendingCard = null;
 
     public GameMenuPanel() {
         setPreferredSize(new Dimension(BASE_WIDTH, BASE_HEIGHT));
@@ -121,9 +122,9 @@ public class GameMenuPanel extends javax.swing.JPanel {
         customerTwo   = new CustomerCard();
         customerThree = new CustomerCard();
 
-        customerOne  .setMakeAction(() -> showCoffeeMaker());
-        customerTwo  .setMakeAction(() -> showCoffeeMaker());
-        customerThree.setMakeAction(() -> showCoffeeMaker());
+        customerOne  .setMakeAction(() -> showCoffeeMaker(customerOne));
+        customerTwo  .setMakeAction(() -> showCoffeeMaker(customerTwo));
+        customerThree.setMakeAction(() -> showCoffeeMaker(customerThree));
 
         menuListBlock = new RoundedBlock(Color.WHITE, BORDER_TAN, 6, 28);
         menuListBlock.setLayout(new BorderLayout());
@@ -159,7 +160,8 @@ public class GameMenuPanel extends javax.swing.JPanel {
         refreshMenuListLabel();
     }
 
-    private void showCoffeeMaker() {
+    private void showCoffeeMaker(CustomerCard card) {
+        pendingCard = card;
         coffeeMaker.reset();
         coffeeMaker.setVisible(true);
         coffeeMaker.revalidate();
@@ -169,6 +171,10 @@ public class GameMenuPanel extends javax.swing.JPanel {
 
     private void hideCoffeeMaker() {
         coffeeMaker.setVisible(false);
+        if (pendingCard != null) {
+            pendingCard.randomize(elapsedMinutes, elapsedSeconds);
+            pendingCard = null;
+        }
     }
 
     public void setDifficulty(String difficulty) {
@@ -192,6 +198,9 @@ public class GameMenuPanel extends javax.swing.JPanel {
         stopGameTimer();
         elapsedMinutes = 0;
         elapsedSeconds = 0;
+        customerOne.randomize(0, 0);
+        customerTwo.randomize(0, 0);
+        customerThree.randomize(0, 0);
         refreshStatLabels();
     }
 
@@ -324,6 +333,17 @@ class CustomerCard extends RoundedBlock {
     private static final Color CARD_BORDER = new Color(120, 90, 64);
     private static final Color MAKE_FILL = new Color(118, 89, 63);
 
+    private static final String[] NAMES = {
+        "Alice", "Bob", "Carol", "Dan", "Eve", "Frank",
+        "Grace", "Henry", "Iris", "Jack", "Karen", "Leo",
+        "Mia", "Noah", "Olivia", "Paul", "Quinn", "Rose"
+    };
+    private static final String[] DRINKS = {
+        "Espresso", "Latte", "Cappuccino",
+        "Americano", "Mocha", "Flat White"
+    };
+    private static final java.util.Random RNG = new java.util.Random();
+
     private final JLabel infoLabel;
     private final JButton makeButton;
 
@@ -346,6 +366,20 @@ class CustomerCard extends RoundedBlock {
 
         add(infoLabel);
         add(makeButton);
+    }
+
+    void randomize(int arrivalMin, int arrivalSec) {
+        String name  = NAMES[RNG.nextInt(NAMES.length)];
+        String drink = DRINKS[RNG.nextInt(DRINKS.length)];
+        infoLabel.setText(String.format(
+            "<html>%s<br>%d M %02d S<br>%s</html>",
+            name, arrivalMin, arrivalSec, drink));
+        makeButton.setEnabled(true);
+    }
+
+    void clear() {
+        infoLabel.setText("<html>— no customer —</html>");
+        makeButton.setEnabled(false);
     }
 
     void setMakeAction(Runnable action) {
